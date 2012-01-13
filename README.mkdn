@@ -1,17 +1,24 @@
 Facebook Social Plugins
 =======================
-
 This module adds support for the Facebook Social Plugins to Drupal.
 
-Supported Drupal versions:
+Supported Drupal versions
+-------------------------
 * 6.x
 
 All Social Plugins are rendered through the theming system, so themes can override their output.
 
 Implemented Social Plugins
 --------------------------
-*  Like Button for nodes
+*  Like Button for nodes.
+
    Adds a Like Button to the bottom of every node, unless configured otherwise for the specific node.
    The way the Like Button is styled can be configured on a global level.
-*  Like Box as block
+
+*  Like Box as block.
+
    Implements the Like Box in a block. The connected entity can be configured, as well as the Like Box options.
+
+Authors
+-------
+Raymond Jelierse <r.jelierse@sparse.nl>

@@ -1,0 +1,85 @@
+<?php
+/**
+ * Facebook: Social Plugins - Installation routines.
+ */
+
+/**
+ * Installs the schema used for the Facebook Like button on nodes.
+ *
+ * @seealso hook_install()
+ */
+function facebook_like_install() {
+    drupal_install_schema('facebook_like');
+    // Prepare existing nodes for Facebook Like settings.
+    $result = db_query('SELECT nid FROM {node}');
+    while (($nid = db_result($result)) > 0) {
+        db_query('INSERT INTO {node_facebook_page} VALUES (%d, NULL, 1, NULL)', $nid);
+    }
+}
+
+/**
+ * Remove all things associated with the module.
+ *
+ * @seealso hook_uninstall()
+ */
+function facebook_like_uninstall() {
+    drupal_uninstall_schema('facebook');
+    // Remove variables
+    variable_del('facebook_like_node_display');
+    variable_del('facebook_like_node_display_teaser');
+    variable_del('facebook_like_node_colorscheme');
+    variable_del('facebook_like_node_font');
+    variable_del('facebook_like_node_width');
+    variable_del('facebook_like_node_layout');
+    variable_del('facebook_like_node_verb');
+    variable_del('facebook_like_node_share');
+    variable_del('facebook_like_block_likebox_show_faces');
+    variable_del('facebook_like_block_likebox_colorscheme');
+    variable_del('facebook_like_block_likebox_width');
+    variable_del('facebook_like_block_likebox_height');
+    variable_del('facebook_like_block_likebox_stream');
+    variable_del('facebook_like_block_likebox_header');
+    variable_del('facebook_like_block_likebox_border_color');
+    variable_del('facebook_like_block_likebox_force_wall');
+}
+
+/**
+ * Define the database schema for this module.
+ *
+ * @return array
+ *     The Schema API data.
+ */
+function facebook_like_schema() {
+    return array(
+        'node_facebook_page' => array(
+            'description' => 'Storage for Facebook page field',
+            'fields' => array(
+                'nid' => array(
+                    'description' => 'The primary identifier for a node.',
+                    'type' => 'int',
+                    'unsigned' => TRUE,
+                    'not null' => TRUE
+                ),
+                'page' => array(
+                    'description' => 'The URL to the Facebook page',
+                    'type' => 'varchar',
+                    'length' => 255,
+                    'default' => NULL,
+                ),
+                'status' => array(
+                    'description' => 'Show the Like button on this node',
+                    'type' => 'int',
+                    'size' => 'tiny',
+                    'default' => 1,
+                ),
+                'data' => array(
+                    'type' => 'text',
+                    'not null' => FALSE,
+                    'size' => 'big',
+                    'description' => 'A serialized array of name value pairs that contain the settings for the Facebook Like button',
+                ),
+            ),
+            'primary key' => array('nid'),
+        ),
+    );
+}

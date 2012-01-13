@@ -1,0 +1,9 @@
+name = Social Plugins
+description = Adds the Facebook Social Plugins to Drupal
+core = 6.x
+package = Facebook for Drupal
+
+project = facebook
+version  = 6.x-1.0
+
+dependencies[] = facebook

@@ -1,0 +1,409 @@
+<?php
+/**
+ * Facebook: Social Plugins
+ */
+
+/**
+ * Add menu items for the Facebook Social module.
+ *
+ * @return array
+ *     Additional menu items.
+ *
+ * @seealso hook_menu()
+ */
+function facebook_like_menu() {
+    return array(
+        'admin/settings/facebook/social' => array(
+            'title' => 'Social plugins',
+            'description' => 'Global settings for the Facebook Social Plugins.',
+            'page callback' => 'drupal_get_form',
+            'page arguments' => array('facebook_like_settings'),
+            'access arguments' => array('administer facebook'),
+        )
+    );
+}
+
+/**
+ * Facebook API settings for the Like button on nodes.
+ *
+ * Contains settings for the method to include the Like button and options to
+ * modify the entire layout of the Like button using the SDK.
+ *
+ * @return array
+ *     The settings form.
+ */
+function facebook_like_settings() {
+    $form = array(
+        'facebook_like_node_display' => array(
+            '#type' => 'select',
+            '#title' => t('Diplay'),
+            '#description' => t('Where should the like button be displayed.'),
+            '#options' => array(
+                FACEBOOK_LIKE_INLINE => t('Inside the content of the node'),
+                FACEBOOK_LIKE_LINKS => t('In the link section of the node'),
+                FACEBOOK_LIKE_TEMPLATE => t('The theme handles the display')
+            ),
+            '#default_value' => variable_get('facebook_like_node_display', FACEBOOK_LIKE_INLINE),
+        ),
+        'facebook_like_node_dislay_teaser' => array(
+            '#type' => 'checkbox',
+            '#title' => t('Also show on node teasers.'),
+            '#default_value' => variable_get('facebook_like_node_display_teaser', false)
+        ),
+        'layout' => array(
+            '#type' => 'fieldset',
+            '#title' => t('Layout'),
+            '#collapsible' => true,
+            '#collapsed' => true,
+            'facebook_like_node_colorscheme' => array(
+                '#type' => 'select',
+                '#title' => t('Color scheme'),
+                '#options' => array(
+                    'light' => t('Light'),
+                    'dark' => t('Dark'),
+                ),
+                '#default_value' => variable_get('facebook_like_node_colorscheme', 'light'),
+            ),
+            'facebook_like_node_font' => array(
+                '#type' => 'select',
+                '#title' => t('Font'),
+                '#options' => array(
+                    'arial' => 'Arial',
+                    'lucida grande' => 'Lucida Grande',
+                    'segoe ui' => 'Segoe UI',
+                    'tahoma' => 'Tahoma',
+                    'trebuchet ms' => 'Trebuchet MS',
+                    'verdana' => 'Verdana'
+                ),
+                '#default_value' => variable_get('facebook_like_node_font', 'lucida grande'),
+            ),
+            'facebook_like_node_width' => array(
+                '#type' => 'textfield',
+                '#title' => t('Width'),
+                '#default_value' => variable_get('facebook_like_node_width', ''),
+            ),
+            'facebook_like_node_layout' => array(
+                '#type' => 'select',
+                '#title' => t('Layout'),
+                '#options' => array(
+                    'standard' => t('Standard'),
+                    'button_count' => t('Button count'),
+                    'box_count' => t('Box count'),
+                ),
+                '#default_value' => variable_get('facebook_like_node_layout', 'standard'),
+            ),
+            'facebook_like_node_verb' => array(
+                '#type' => 'select',
+                '#title' => t('Action'),
+                '#options' => array(
+                    'like' => t('Like'),
+                    'recommend' => t('Recommend'),
+                ),
+                '#default_value' => variable_get('facebook_like_node_verb', 'like'),
+            ),
+            'facebook_like_node_share' => array(
+                '#type' => 'checkbox',
+                '#title' => t('Show an additional Share button.'),
+                '#default_value' => variable_get('facebook_like_node_share', FALSE),
+            ),
+        )
+    );
+
+    return system_settings_form($form);
+}
+
+/**
+ * Block implementations for Facebook.
+ *
+ * Contains the following blocks:
+ *   - Facebook Events: Show a list of upcoming events for a configured Facebook entitiy.
+ *   - Facebook Like: Show a Facebook Like widget for a configured Facebook entitity.
+ *
+ * @param string $op
+ *     The operation to perform.
+ * @param string $delta
+ *     The unique identifier of the block.
+ * @param array $data
+ *     The submitted form data for the save operation.
+ *
+ * @return array
+ *     The data required by the operation.
+ *
+ * @seealso hook_block()
+ */
+function facebook_block($op = 'list', $delta = '', $data = array()) {
+    switch ($op) {
+    case 'list':
+    default:
+        return array(
+            'likebox' => array(
+                'info' => t('Facebook: Like Box'),
+            ),
+        );
+    
+    case 'view':
+        return call_user_func("facebook_like_block_{$delta}_view");
+
+    case 'configure':
+        return call_user_func("facebook_like_block_{$delta}_form");
+
+    case 'save':
+        return call_user_func("facebook_like_block_{$delta}_form_submit", $data);
+    }
+}
+
+/**
+ * Create the block that contains the Facebook Like widget.
+ *
+ * @return array
+ *     The block content.
+ */
+function facebook_like_block_likebox_view() {
+    $attributes = array();
+    $attributes['href'] = variable_get('facebook_page', '');
+    $attributes['show_faces'] = variable_get('facebook_like_block_likebox_show_faces', true);
+    $attributes['colorscheme'] = variable_get('facebook_like_block_likebox_colorscheme', 'light');
+    $attributes['width'] = variable_get('facebook_like_block_likebox_width', '');
+    $attributes['height'] = variable_get('facebook_like_block_likebox_height', '');
+    $attributes['stream'] = variable_get('facebook_like_block_likebox_stream', true);
+    $attributes['header'] = variable_get('facebook_like_block_likebox_header', true);
+    $attributes['border_color'] = variable_get('facebook_like_block_likebox_border_color', '');
+    $attributes['force_wall'] = variable_get('facebook_like_block_likebox_force_wall', FALSE);
+
+    // Return block content
+    return array(
+        'subject' => t('Like this website'),
+        'content' => theme('like_box', $attributes),
+    );
+}
+
+/**
+ * Configuration options for the Facebook Like block.
+ *
+ * @return array
+ *     The configuration form.
+ */
+function facebook_like_block_likebox_form() {
+    return array(
+        'facebook_like_block_likebox_show_faces' => array(
+            '#type' => 'checkbox',
+            '#title' => t('Show the faces of the people that like this item.'),
+            '#default_value' => variable_get('facebook_like_block_likebox_show_faces', true),
+        ),
+        'facebook_like_block_likebox_colorscheme' => array(
+            '#type' => 'select',
+            '#title' => t('Color scheme'),
+            '#options' => array(
+                'light' => t('Light'),
+                'dark' => t('Dark'),
+            ),
+            '#default_value' => variable_get('facebook_like_block_likebox_colorscheme', 'light'),
+        ),
+        'facebook_like_block_likebox_width' => array(
+            '#type' => 'textfield',
+            '#title' => t('Width'),
+            '#default_value' => variable_get('facebook_like_block_likebox_width', ''),
+        ),
+        'facebook_like_block_likebox_height' => array(
+            '#type' => 'textfield',
+            '#title' => t('Height'),
+            '#default_value' => variable_get('facebook_like_block_likebox_height', ''),
+        ),
+        'facebook_like_block_likebox_stream' => array(
+            '#type' => 'checkbox',
+            '#title' => t('Show the feed from the linked page.'),
+            '#default_value' => variable_get('facebook_like_block_likebox_stream', false),
+        ),
+        'facebook_like_block_likebox_header' => array(
+            '#type' => 'checkbox',
+            '#title' => t('Show the box header.'),
+            '#default_value' => variable_get('facebook_like_block_likebox_header', false),
+        ),
+        'facebook_like_block_likebox_border_color' => array(
+            '#type' => 'textfield',
+            '#title' => t('Border color'),
+            '#default_value' => variable_get('facebook_like_block_likebox_border_color', ''),
+        ),
+        'facebook_like_block_likebox_force_wall' => array(
+            '#type' => 'checkbox',
+            '#title' => t('Show only posts on the place\'s wall, instead of check-ins.'),
+            '#default_value' => variable_get('facebook_like_block_likebox_force_wall', false),
+        ),
+    );
+}
+
+/**
+ * Save the configuration settings for the Facebook Like block.
+ *
+ * @param array $data
+ *     The data submitted in the form.
+ */
+function facebook_like_block_likebox_form_submit($data) {
+    foreach ($data as $key => $value) {
+        variable_set($key, $value);
+    }
+}
+
+/**
+ * Adds the Facebook Like button to nodes.
+ *
+ * @param object $node
+ *     The node object that is being processed.
+ *     When operation is insert or update, this contains the submitted form data.
+ * @param string $op
+ *     The current operation for node processing.
+ * @param mixed $a3
+ *     When viewing a node: whether the node viewed is being viewed as a teaser.
+ *     When validating a node: the form that was used to edit the node.
+ * @param bool $a4
+ *     When viewing a node: whether the node viewed is being viewed is the main item on the page.
+ *
+ * @seealso hook_nodeapi()
+ */
+function facebook_like_nodeapi(&$node, $op, $a3 = null, $a4 = false) {
+    switch ($op) {
+    case 'insert':
+    case 'update':
+        $facebook = array(
+            'nid' => $node->nid,
+            'page' => empty($node->facebook_like_page) ? NULL : $node->facebook_like_page,
+            'status' => $node->facebook_like_enabled,
+            'data' => NULL
+        );
+        $key = null;
+        if (db_result(db_query('SELECT nid FROM {node_facebook_page} WHERE nid = %d', $node->nid))) {
+            $key = 'nid';
+        }
+
+        if (drupal_write_record('node_facebook_page', $facebook, $key) === FALSE) {
+            drupal_set_message('Failed to save Facebook settings for node');
+        }
+        break;
+
+    case 'delete':
+        db_query('DELETE FROM {node_facebook_page} WHERE nid = %d', $node->nid);
+        break;
+
+    case 'load':
+        $result = db_query("SELECT page, status FROM {node_facebook_page} WHERE nid = %d", $node->nid);
+        if (($result = db_fetch_array($result)) !== FALSE) {
+            $node->facebook_like = array(
+                'status' => (bool) $result['status'],
+                'href' => (!empty($result['page'])) ? $result['page'] : ''
+            );
+        } else {
+            $node->facebook_like = array(
+                'status' => true,
+                'href' => ''
+            );
+        }
+        $node->facebook_like['show_faces'] = (bool) variable_get('facebook_like_node_show_faces', false);
+        $node->facebook_like['colorscheme'] = variable_get('facebook_like_node_colorscheme', 'light');
+        $node->facebook_like['font'] = variable_get('facebook_like_node_font', 'lucida grande');
+        $node->facebook_like['width'] = variable_get('facebook_like_node_width', '');
+        $node->facebook_like['layout'] = variable_get('facebook_like_node_layout', 'standard');
+        $node->facebook_like['action'] = variable_get('facebook_like_node_verb', 'like');
+        $node->facebook_like['send'] = (bool) variable_get('facebook_like_node_share', false);
+        break;
+
+    case 'view':
+        if ($node->facebook_like['status'] &&
+            ($a3 == false || ($a3 && variable_get('facebook_like_node_display_teaser', false))) &&
+            variable_get('facebook_like_node_display', FACEBOOK_LIKE_INLINE) == FACEBOOK_LIKE_INLINE
+        ) {
+            $node->content['facebook_like'] = array(
+                '#value' => theme('like_button', (empty($node->facebook_like)) ? array() : $node->facebook_like),
+                '#weight' => 1,
+            );
+        }
+        break;
+    }
+}
+
+/**
+ * Alter the node edit form to add Facebook Like button settings.
+ *
+ * @param array $form
+ *     The form.
+ * @param array $form_state
+ *     The form state.
+ * @param $form_id
+ *     The form ID.
+ *
+ * @seealso hook_form_alter()
+ */
+function facebook_like_form_alter(&$form, $form_state, $form_id) {
+    if (isset($form['#id']) && $form['#id'] == 'node-form') {
+        $node = $form['#node'];
+
+        $form['facebook_like'] = array(
+            '#type' => 'fieldset',
+            '#title' => t('Facebook Like'),
+            '#collapsible' => TRUE,
+            'facebook_like_enabled' => array(
+                '#type' => 'checkbox',
+                '#title' => t('Enable Like button'),
+                '#default_value' => $node->facebook_like['status'],
+            ),
+            'facebook_like_page' => array(
+                '#type' => 'textfield',
+                '#title' => t('Page to like'),
+                '#default_value' => $node->facebook_like['href'],
+                '#description' => t('You can use this to override the URL of the page that should be liked on Facebook. By default, when the Like button is clicked, the current page is liked.'),
+            ),
+        );
+    }
+}
+
+/**
+ * Add the Facebook Like button to the node links, when configured to do so.
+ *
+ * @param string $type
+ *     The type of $object, can be node or comment.
+ * @param object $object
+ *     The object that contains the data.
+ * @param bool $teaser
+ *     Whether the object is being displayed as a teaser.
+ *
+ * @return array
+ *     The links that should be added to the node's link section.
+ *
+ * @seealso hook_link()
+ */
+function facebook_like_link($type, $object, $teaser = false) {
+    $links = array();
+    if ($type == 'node' &&
+        $object->facebook_like['status'] &&
+        ($teaser == false || ($teaser && variable_get('facebook_like_node_display_teaser', false))) &&
+        variable_get('facebook_like_node_display', FACEBOOK_LIKE_INLINE) == FACEBOOK_LIKE_LINKS
+    ) {
+        $links['facebook_like'] = array(
+            'title' => theme('like_button', $object->facebook_like),
+            'html' => true
+        );
+    }
+
+    return $links;
+}
+
+/**
+ * Define the theme implementations for the Facebook module.
+ *
+ * @return array
+ *     Additional theme implementations.
+ *
+ * @seealso hook_theme()
+ */
+function facebook_like_theme() {
+    return array(
+        'like_button' => array(
+            'file' => 'facebook_like.theme.inc'
+        ),
+        'like_box' => array(
+            'file' => 'facebook_like.theme.inc'
+        ),
+        'subscribe_button' => array(
+            'file' => 'facebook_like.theme.inc'
+        ),
+    );
+}
